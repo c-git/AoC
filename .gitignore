@@ -1,0 +1,5 @@
+# Avoid accidentally uploading my key
+.env
+
+# In keeping with the rules not saving input
+input*
