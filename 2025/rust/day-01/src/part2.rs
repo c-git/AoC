@@ -12,7 +12,7 @@ pub fn process(input: &str) -> miette::Result<String> {
             .into_diagnostic()
             .wrap_err_with(|| format!("failed parsing of number clicks {line:?}"))?;
         curr_position += sign * clicks;
-        let rotation_count = curr_position / 100;
+        let rotation_count = (curr_position / 100).abs();
         result += rotation_count
             - if rotation_count != 0 && curr_position % 100 == 0 {
                 1
