@@ -5,6 +5,8 @@ Solutions for the [Advent of Code](http://adventofcode.com/)
 Answers are organized by year then language.
 Structure and basic setup copied from https://github.com/ChristopherBiscardi/advent-of-code
 
+See `justfile` in the folders for the years for explanations of how to use the template
+
 ## License
 
 All code in this repository is dual-licensed under either:
