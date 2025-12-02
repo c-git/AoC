@@ -1,0 +1,22 @@
+# This is a configuration file for the bacon tool
+#
+# Complete help on configuration: https://dystroy.org/bacon/config/
+#
+#  You may check the current default at
+#   https://github.com/Canop/bacon/blob/main/defaults/default-bacon.toml
+
+[jobs.run1]
+command = [
+  "cargo",
+  "run",
+  "--bin",
+  "part1",
+]
+need_stdout = true
+allow_warnings = true
+background = false
+on_change_strategy = "kill_then_restart"
+
+[keybindings]
+1 = "job:run1"
+2 = "job:run2"
