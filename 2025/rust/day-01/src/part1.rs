@@ -11,11 +11,9 @@ pub fn process(input: &str) -> miette::Result<String> {
             .into_diagnostic()
             .wrap_err("failed parsing of number clicks")?;
         curr_position += sign * clicks;
+        curr_position %= 100;
         if curr_position < 0 {
             curr_position += 100;
-        }
-        if curr_position > 99 {
-            curr_position -= 100;
         }
         if curr_position == 0 {
             result += 1;
