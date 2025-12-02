@@ -10,8 +10,7 @@ reqwest = { version = "0.12", features=["blocking"] }
 
 use clap::{error::ErrorKind, CommandFactory, Parser};
 use nom::{
-    bytes::complete::tag, character::complete,
-    sequence::preceded, IResult, Parser as NomParser,
+    bytes::complete::tag, character::complete, sequence::preceded, IResult, Parser as NomParser,
 };
 use reqwest::{blocking::Client, header::COOKIE};
 use std::fs::File;
@@ -38,24 +37,18 @@ fn parse_day(input: &str) -> IResult<&str, u32> {
 }
 
 fn main() -> Result<(), reqwest::Error> {
-    let session = std::env::var("SESSION")
-        .expect("should have a session token set");
+    let session = std::env::var("SESSION").expect("should have a session token set");
     let args = Args::parse();
     let Ok((_, day)) = parse_day(&args.day) else {
         let mut cmd = Args::command();
         cmd.error(
             ErrorKind::ValueValidation,
-            format!(
-                "day `{}` must be formatted as `day-01`",
-                args.day
-            ),
+            format!("day `{}` must be formatted as `day-01`", args.day),
         )
         .exit()
     };
 
-    let url = format!(
-        "https://adventofcode.com/2025/day/{day}/input"
-    );
+    let url = format!("https://adventofcode.com/2025/day/{day}/input");
     println!("sending to `{}`", url);
 
     let client = Client::new();
@@ -70,12 +63,10 @@ fn main() -> Result<(), reqwest::Error> {
             .current_working_directory
             .join(&args.day)
             .join(filename);
-        let mut file = File::create(&file_path)
-            .expect("should be able to create a file");
+        let mut file = File::create(&file_path).expect("should be able to create a file");
 
-        file.write_all(input_data.as_bytes()).expect(
-            "should be able to write to input file",
-        );
+        file.write_all(input_data.as_bytes())
+            .expect("should be able to write to input file");
         println!("wrote {}", file_path.display());
     }
 
