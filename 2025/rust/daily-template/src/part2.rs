@@ -11,7 +11,7 @@ mod tests {
     #[ignore = "not on second part yet"]
     fn test_process() -> miette::Result<()> {
         let input = "";
-        assert_eq!("", process(input)?);
+        assert_eq!(process(input)?, "");
         Ok(())
     }
 }
