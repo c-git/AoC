@@ -79,7 +79,7 @@ pub fn process(input: &str) -> miette::Result<String> {
     Ok(result.to_string())
 }
 
-fn clear_out_pending(grid: &mut Vec<Vec<Cell>>) {
+fn clear_out_pending(grid: &mut [Vec<Cell>]) {
     for row in grid.iter_mut() {
         for cell in row.iter_mut() {
             if cell.is_pending_delete() {
