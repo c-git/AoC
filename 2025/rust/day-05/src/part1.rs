@@ -49,7 +49,7 @@ pub fn process(input: &str) -> miette::Result<String> {
             if (start..=end).contains(&query_id) {
                 result += 1;
                 break;
-            } else if start > query_id {
+            } else if end < query_id {
                 // This is not fresh it didn't match any
                 break;
             } else {
