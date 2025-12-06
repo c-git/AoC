@@ -1,6 +1,7 @@
 #[tracing::instrument]
-pub fn process(_input: &str) -> miette::Result<String> {
-    todo!("{{project-name}} - part 1");
+pub fn process(input: &str) -> miette::Result<String> {
+    let mut result = 0;
+    Ok(result.to_string())
 }
 
 #[cfg(test)]
