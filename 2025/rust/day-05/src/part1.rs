@@ -19,8 +19,24 @@ pub fn process(input: &str) -> miette::Result<String> {
             break;
         }
         let (start, end) = parse_range(line)?;
-        let entry = fresh_ranges.entry(start).or_default();
-        *entry = end.max(*entry);
+        match fresh_ranges.range(..=end).last() {
+            Some((&latest_start, &latest_end)) => {
+                if start <= latest_end {
+                    // They overlap merge
+                    fresh_ranges.remove(&latest_start);
+                    let new_start = start.min(latest_start);
+                    let new_end = end.max(latest_start);
+                    fresh_ranges.insert(new_start, new_end);
+                } else {
+                    // No overlap just insert
+                    fresh_ranges.insert(start, end);
+                }
+            }
+            None => {
+                // Nothing starts before this one ends
+                fresh_ranges.insert(start, end);
+            }
+        }
     }
 
     // Read queries
@@ -32,6 +48,9 @@ pub fn process(input: &str) -> miette::Result<String> {
         for (&start, &end) in fresh_ranges.range(..=query_id).rev() {
             if (start..=end).contains(&query_id) {
                 result += 1;
+                break;
+            } else if end < query_id {
+                // This is not fresh it didn't match any
                 break;
             } else {
                 // Not a match check the next range
