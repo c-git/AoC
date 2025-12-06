@@ -18,25 +18,23 @@ pub fn process(input: &str) -> miette::Result<String> {
             // Remaining lines are queries
             break;
         }
-        let (start, end) = parse_range(line)?;
-        match fresh_ranges.range(..=end).last() {
-            Some((&latest_start, &latest_end)) => {
-                if start <= latest_end {
-                    // They overlap merge
-                    fresh_ranges.remove(&latest_start);
-                    let new_start = start.min(latest_start);
-                    let new_end = end.max(latest_start);
-                    fresh_ranges.insert(new_start, new_end);
-                } else {
-                    // No overlap just insert
-                    fresh_ranges.insert(start, end);
-                }
-            }
-            None => {
-                // Nothing starts before this one ends
-                fresh_ranges.insert(start, end);
+        let (mut start, mut end) = parse_range(line)?;
+        let mut remove_list = vec![];
+        for (&existing_start, &existing_end) in fresh_ranges.range(..=end).rev() {
+            if start <= existing_end {
+                remove_list.push(existing_start);
+            } else {
+                break;
             }
         }
+        for old_start in remove_list {
+            let old_end = fresh_ranges
+                .remove(&old_start)
+                .wrap_err("we know this key must exists we just found it from the map")?;
+            start = start.min(old_start);
+            end = end.max(old_end);
+        }
+        fresh_ranges.insert(start, end);
     }
 
     // Read queries
