@@ -67,7 +67,9 @@ pub fn process(input: &str) -> miette::Result<String> {
         .to_string())
 }
 
-fn get_nearest_neighbours(points: &[JunctionBox]) -> BinaryHeap<Reverse<NearestNeighboursInfo>> {
+pub fn get_nearest_neighbours(
+    points: &[JunctionBox],
+) -> BinaryHeap<Reverse<NearestNeighboursInfo>> {
     let mut result = BinaryHeap::new();
     for (i1, p1) in points.iter().enumerate() {
         for (i2, p2) in points.iter().enumerate() {
@@ -85,20 +87,20 @@ fn get_nearest_neighbours(points: &[JunctionBox]) -> BinaryHeap<Reverse<NearestN
     result
 }
 
-struct UnionFind {
+pub struct UnionFind {
     roots: Vec<usize>,
     group_size: Vec<usize>,
 }
 
 impl UnionFind {
-    fn new(size: usize) -> Self {
+    pub fn new(size: usize) -> Self {
         Self {
             roots: (0..size).collect(),
             group_size: vec![1; size],
         }
     }
 
-    fn join(&mut self, x: usize, y: usize) {
+    pub fn join(&mut self, x: usize, y: usize) {
         let root_x = self.find(x);
         let root_y = self.find(y);
         if root_x == root_y {
@@ -113,28 +115,23 @@ impl UnionFind {
         }
     }
 
-    fn join_pair(&mut self, pair: [usize; 2]) {
+    pub fn join_pair(&mut self, pair: [usize; 2]) {
         self.join(pair[0], pair[1]);
     }
 
-    fn find(&mut self, x: usize) -> usize {
+    pub fn find(&mut self, x: usize) -> usize {
         if self.roots[x] != x {
             self.roots[x] = self.find(self.roots[x]);
         }
         self.roots[x]
     }
 
-    #[expect(dead_code)] // Not needed right now
-    fn is_same(&mut self, x: usize, y: usize) -> bool {
-        self.find(x) == self.find(y)
-    }
-
-    fn group_size(&self, x: usize) -> usize {
+    pub fn group_size(&self, x: usize) -> usize {
         self.group_size[x]
     }
 }
 
-struct JunctionBox {
+pub struct JunctionBox {
     x: i64,
     y: i64,
     z: i64,
@@ -149,10 +146,10 @@ impl JunctionBox {
 }
 
 #[derive(Debug)]
-struct NearestNeighboursInfo {
+pub struct NearestNeighboursInfo {
     distance: f64,
     // pair of indices with lower index number first
-    junction_box_indices: [usize; 2],
+    pub junction_box_indices: [usize; 2],
 }
 
 impl Default for NearestNeighboursInfo {
