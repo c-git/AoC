@@ -10,6 +10,7 @@ use miette::Context;
 pub fn process(input: &str) -> miette::Result<String> {
     const NUM_LARGEST_TO_CONSIDER: usize = 3;
     const BOXES_TO_CONNECT: usize = if cfg!(debug_assertions) { 10 } else { 1000 };
+    dbg!(BOXES_TO_CONNECT);
 
     // Convert input into points
     let points: Vec<JunctionBox> = input
