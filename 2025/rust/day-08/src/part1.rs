@@ -133,9 +133,9 @@ impl UnionFind {
 }
 
 pub struct JunctionBox {
-    x: i64,
-    y: i64,
-    z: i64,
+    pub x: i64,
+    pub y: i64,
+    pub z: i64,
 }
 impl JunctionBox {
     fn distance_to(&self, other_point: &JunctionBox) -> f64 {

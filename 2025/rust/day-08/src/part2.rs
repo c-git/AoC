@@ -1,7 +1,4 @@
-use std::{
-    cmp::Reverse,
-    collections::{BTreeSet, BinaryHeap},
-};
+use std::{cmp::Reverse, collections::BTreeSet};
 
 use miette::Context;
 
@@ -9,10 +6,6 @@ use crate::part1::{JunctionBox, NearestNeighboursInfo, UnionFind, get_nearest_ne
 
 #[tracing::instrument]
 pub fn process(input: &str) -> miette::Result<String> {
-    const NUM_LARGEST_TO_CONSIDER: usize = 3;
-    const BOXES_TO_CONNECT: usize = if cfg!(debug_assertions) { 10 } else { 1000 };
-    dbg!(BOXES_TO_CONNECT);
-
     // Convert input into points
     let points: Vec<JunctionBox> = input
         .lines()
@@ -29,7 +22,7 @@ pub fn process(input: &str) -> miette::Result<String> {
     // Join and track with union find
     let mut links: BTreeSet<NearestNeighboursInfo> = BTreeSet::new();
     let mut union_find = UnionFind::new(points.len());
-    while links.len() < BOXES_TO_CONNECT {
+    loop {
         let next_candidate = nearest_neighbours
             .pop()
             .map(|Reverse(x)| x)
@@ -39,33 +32,14 @@ pub fn process(input: &str) -> miette::Result<String> {
             continue;
         }
         union_find.join_pair(next_candidate.junction_box_indices);
+        if union_find.group_size(next_candidate.junction_box_indices[0]) == points.len() {
+            // All points are now connected
+            let x1 = points[next_candidate.junction_box_indices[0]].x;
+            let x2 = points[next_candidate.junction_box_indices[1]].x;
+            return Ok((x1 * x2).to_string());
+        }
         links.insert(next_candidate);
     }
-
-    // Calculate output
-    let mut largest = BinaryHeap::new();
-    let mut seen_root = BTreeSet::new();
-    for index in 0..points.len() {
-        let root = union_find.find(index);
-        if seen_root.contains(&root) {
-            // Already processed this root
-            continue;
-        }
-        seen_root.insert(root);
-        largest.push(Reverse(union_find.group_size(root)));
-        if largest.len() > NUM_LARGEST_TO_CONSIDER {
-            largest.pop();
-        }
-        debug_assert!(
-            largest.len() <= NUM_LARGEST_TO_CONSIDER,
-            "we should have just reduced to make this true"
-        );
-    }
-
-    Ok(largest
-        .into_iter()
-        .fold(1, |acc, Reverse(x)| acc * x)
-        .to_string())
 }
 
 #[cfg(test)]
