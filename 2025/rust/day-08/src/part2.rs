@@ -95,7 +95,7 @@ mod tests {
 984,92,344
 425,690,689
 ";
-        assert_eq!(process(input)?, "40");
+        assert_eq!(process(input)?, "25272");
         Ok(())
     }
 }
