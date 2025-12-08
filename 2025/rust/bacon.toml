@@ -58,5 +58,5 @@ on_change_strategy = "kill_then_restart"
 [keybindings]
 1 = "job:run1"
 2 = "job:run2"
-o = "job:run1_debug"
-t = "job:run2_debug"
+q = "job:run1_debug"
+w = "job:run2_debug"
