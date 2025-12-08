@@ -126,8 +126,9 @@ impl UnionFind {
         self.roots[x]
     }
 
-    pub fn group_size(&self, x: usize) -> usize {
-        self.group_size[x]
+    pub fn group_size(&mut self, x: usize) -> usize {
+        let x_root = self.find(x);
+        self.group_size[x_root]
     }
 }
 
