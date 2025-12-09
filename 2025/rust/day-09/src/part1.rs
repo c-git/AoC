@@ -3,7 +3,7 @@ pub fn process(input: &str) -> miette::Result<String> {
     let mut result = 0;
 
     // Collect input
-    let mut red_squares = input
+    let red_squares = input
         .lines()
         .map(|line| {
             let pair: Vec<i64> = line
@@ -14,7 +14,6 @@ pub fn process(input: &str) -> miette::Result<String> {
             (pair[0], pair[1])
         })
         .collect::<Vec<_>>();
-    red_squares.sort_unstable();
 
     // Check each pair (Room to optimize but may not be worth it)
     for (i, first) in red_squares.iter().enumerate().take(red_squares.len() - 1) {
