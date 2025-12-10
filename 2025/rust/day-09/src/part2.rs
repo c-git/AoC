@@ -1,5 +1,4 @@
-use std::collections::BTreeMap;
-
+/// Based on https://www.youtube.com/watch?v=RyLuE5xFLxw
 #[tracing::instrument]
 pub fn process(input: &str) -> miette::Result<String> {
     let mut result = 0;
@@ -17,13 +16,17 @@ pub fn process(input: &str) -> miette::Result<String> {
         })
         .collect::<Vec<_>>();
 
-    // Calculate ranges of green / red
-    let allowed_ranges = AllowedRanges::new(&red_squares);
+    // Get list of lines
+    let mut lines = vec![(red_squares.first().unwrap(), red_squares.last().unwrap())];
+    for i in 0..red_squares.len() - 1 {
+        lines.push((&red_squares[i], &red_squares[i + 1]));
+    }
 
-    // Check each pair (Room to optimize but may not be worth it)
+    // Check each pair
     for (i, first) in red_squares.iter().enumerate().take(red_squares.len() - 1) {
         for second in red_squares.iter().skip(i + 1) {
-            if allowed_ranges.included(first, second) {
+            // Check for overlap
+            if !overlaps_line(first, second, &lines) {
                 result = result.max(get_area(first, second));
             }
         }
@@ -32,89 +35,25 @@ pub fn process(input: &str) -> miette::Result<String> {
     Ok(result.to_string())
 }
 
-type Start = i64;
-type End = i64;
-
-struct AllowedRanges {
-    x_ranges: BTreeMap<Start, End>,
-    y_ranges: BTreeMap<Start, End>,
-}
-
-impl AllowedRanges {
-    fn new(red_squares: &[(i64, i64)]) -> Self {
-        let mut result = Self {
-            x_ranges: Default::default(),
-            y_ranges: Default::default(),
-        };
-        result.add_range(red_squares.first().unwrap(), red_squares.last().unwrap());
-        for i in 0..red_squares.len() - 1 {
-            result.add_range(&red_squares[i], &red_squares[i + 1]);
-        }
-        result
-    }
-
-    /// Points must be either in the same column or row otherwise this function panics
-    fn add_range(&mut self, point1: &(i64, i64), point2: &(i64, i64)) {
-        if point1.0 == point2.0 {
-            // Same row
-            let (start, end) = if point1.1 < point2.1 {
-                (point1.1, point2.1)
-            } else {
-                (point2.1, point1.1)
-            };
-            let y = self.y_ranges.entry(start).or_default();
-            *y = end.max(*y);
-        } else if point1.1 == point2.1 {
-            // Same column
-            let (start, end) = if point1.0 < point2.0 {
-                (point1.0, point2.0)
-            } else {
-                (point2.0, point1.0)
-            };
-            let x = self.x_ranges.entry(start).or_default();
-            *x = end.max(*x);
-        } else {
-            unreachable!("input should always be either same column or same row")
+#[expect(clippy::type_complexity)]
+fn overlaps_line(
+    first: &(i64, i64),
+    second: &(i64, i64),
+    lines: &[(&(i64, i64), &(i64, i64))],
+) -> bool {
+    // Overlaps a line if it is both above and below and to the left and to the
+    // right. That means it must be crossing the line
+    for (line_start, line_end) in lines {
+        let is_to_left = first.0.max(second.0) <= line_start.0.min(line_end.0);
+        let is_to_right = first.0.min(second.0) >= line_start.0.max(line_end.0);
+        let is_above = first.1.max(second.1) <= line_start.1.min(line_end.1);
+        let is_below = first.1.min(second.1) >= line_start.1.max(line_end.1);
+        if !is_to_left && !is_to_right && !is_above && !is_below {
+            return true;
         }
     }
 
-    fn included(&self, point1: &(i64, i64), point2: &(i64, i64)) -> bool {
-        let (x1, x2, y1, y2) = (point1.0, point2.0, point1.1, point2.1);
-        println!(
-            "({x1}, {y1}), ({x2}, {y2}) - {}",
-            self.test_x(x1, x2) && self.test_y(y1, y2)
-        );
-        self.test_x(x1, x2) && self.test_y(y1, y2)
-    }
-
-    fn test_x(&self, mut x1: i64, mut x2: i64) -> bool {
-        if x2 < x1 {
-            std::mem::swap(&mut x1, &mut x2);
-        }
-        Self::test(&self.x_ranges, x1, x2)
-    }
-
-    fn test_y(&self, mut y1: i64, mut y2: i64) -> bool {
-        if y2 < y1 {
-            std::mem::swap(&mut y1, &mut y2);
-        }
-        Self::test(&self.y_ranges, y1, y2)
-    }
-
-    fn test(ranges: &BTreeMap<Start, End>, start: i64, end: i64) -> bool {
-        debug_assert!(start <= end);
-        for (&range_start, &range_end) in ranges.range(..=start).rev() {
-            // Keep going until we hit ranges that will never work
-            if start < range_start {
-                // Cannot work as not included anymore
-                break;
-            }
-            if end <= range_end {
-                return true;
-            }
-        }
-        false
-    }
+    false
 }
 
 fn get_area(first: &(i64, i64), second: &(i64, i64)) -> u64 {
