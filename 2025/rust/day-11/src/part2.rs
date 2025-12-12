@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 
 use miette::Context;
 
@@ -12,18 +12,23 @@ pub fn process(input: &'static str) -> miette::Result<String> {
             fft_seen: false,
             dac_seen: false,
         },
+        &mut HashMap::new(),
     );
     Ok(result.to_string())
 }
 
-fn dfs(graph: &Graph, mut next: NextNode) -> usize {
+fn dfs(graph: &Graph, start: NextNode, memo: &mut HashMap<NextNode, usize>) -> usize {
+    if let Some(result) = memo.get(&start) {
+        return *result;
+    }
     let mut result = 0;
-    if next.next_node == "out" {
-        if next.dac_seen && next.fft_seen {
+    if start.next_node == "out" {
+        if start.dac_seen && start.fft_seen {
             return 1;
         }
         return 0;
     }
+    let mut next = start;
     if next.next_node == "fft" {
         next.fft_seen = true;
     }
@@ -44,8 +49,10 @@ fn dfs(graph: &Graph, mut next: NextNode) -> usize {
                 next_node: neighbour,
                 ..next
             },
+            memo,
         );
     }
+    memo.insert(start, result);
     result
 }
 
@@ -62,7 +69,7 @@ fn parse_graph(input: &'static str) -> Graph {
     result
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 struct NextNode {
     next_node: &'static str,
     fft_seen: bool,
