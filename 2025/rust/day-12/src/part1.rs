@@ -33,9 +33,13 @@ fn parse(input: &str) -> (Vec<Shape>, Vec<Region>) {
     let mut partial_shape_count = 0;
     for (i, c) in input.char_indices().skip(2) {
         if c.is_numeric() {
-            region_start = i;
-            shapes.push(Shape(partial_shape_count));
-            partial_shape_count = 0;
+            // To account for multi digit numbers we only "move" forward when we have a
+            // shape in progress
+            if partial_shape_count > 0 {
+                region_start = i;
+                shapes.push(Shape(partial_shape_count));
+                partial_shape_count = 0;
+            }
             continue;
         }
         if c == 'x' {
@@ -52,10 +56,11 @@ fn parse(input: &str) -> (Vec<Shape>, Vec<Region>) {
         let (second_dimension, rest) = rest.split_once(":").unwrap();
         let size =
             first_dimension.parse::<usize>().unwrap() * second_dimension.parse::<usize>().unwrap();
-        let requirements = rest
+        let requirements: Vec<u8> = rest
             .split_whitespace()
             .map(|x| x.parse().unwrap())
             .collect();
+        debug_assert_eq!(requirements.len(), shapes.len(), "{shapes:#?}");
         regions.push(Region { size, requirements });
     }
     (shapes, regions)
