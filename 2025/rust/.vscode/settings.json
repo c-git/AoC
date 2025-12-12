@@ -1,5 +1,8 @@
 {
   "files.readonlyInclude": {
     "**/input*.txt": true
-  }
+  },
+  "cSpell.words": [
+    "joltage"
+  ]
 }
