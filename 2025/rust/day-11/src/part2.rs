@@ -1,36 +1,52 @@
-use std::collections::{BTreeMap, VecDeque};
+use std::collections::BTreeMap;
+
+use miette::Context;
 
 #[tracing::instrument]
 pub fn process(input: &'static str) -> miette::Result<String> {
-    let mut result = 0;
     let graph = parse_graph(input);
-    let mut queue = VecDeque::new();
-    queue.push_back(NextNode {
-        next_node: "svr",
-        fft_seen: false,
-        dac_seen: false,
-    });
-    while let Some(mut next) = queue.pop_front() {
-        if next.next_node == "out" {
-            if next.dac_seen && next.fft_seen {
-                result += 1;
-            }
-            continue;
+    let result = dfs(
+        &graph,
+        NextNode {
+            next_node: "svr",
+            fft_seen: false,
+            dac_seen: false,
+        },
+    );
+    Ok(result.to_string())
+}
+
+fn dfs(graph: &Graph, mut next: NextNode) -> usize {
+    let mut result = 0;
+    if next.next_node == "out" {
+        if next.dac_seen && next.fft_seen {
+            return 1;
         }
-        if next.next_node == "fft" {
-            next.fft_seen = true;
-        }
-        if next.next_node == "dac" {
-            next.dac_seen = true;
-        }
-        for &neighbour in graph.nodes.get(next.next_node).unwrap().iter() {
-            queue.push_back(NextNode {
+        return 0;
+    }
+    if next.next_node == "fft" {
+        next.fft_seen = true;
+    }
+    if next.next_node == "dac" {
+        next.dac_seen = true;
+    }
+
+    for &neighbour in graph
+        .nodes
+        .get(next.next_node)
+        .wrap_err_with(|| format!("unable to find: {:?}", next.next_node))
+        .unwrap()
+        .iter()
+    {
+        result += dfs(
+            graph,
+            NextNode {
                 next_node: neighbour,
                 ..next
-            });
-        }
+            },
+        );
     }
-    Ok(result.to_string())
+    result
 }
 
 fn parse_graph(input: &'static str) -> Graph {
