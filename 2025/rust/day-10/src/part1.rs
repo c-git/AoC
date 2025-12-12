@@ -12,7 +12,7 @@ pub fn process(input: &str) -> miette::Result<String> {
     Ok(result.to_string())
 }
 
-fn min_presses_for_machine(machine: &Machine) -> u8 {
+fn min_presses_for_machine(machine: &Machine) -> u32 {
     let mut queue = VecDeque::new();
     for i in 0..machine.buttons.len() {
         queue.push_back(PressTracker {
@@ -34,7 +34,7 @@ fn min_presses_for_machine(machine: &Machine) -> u8 {
         tracker.state ^= machine.buttons[tracker.next_button];
 
         if tracker.state == machine.target {
-            return tracker.press_count;
+            return tracker.press_count as _;
         }
         tracker.pressed += 1 << tracker.next_button; // Mark button as pressed
         // eprintln!("{tracker:?}\n");
