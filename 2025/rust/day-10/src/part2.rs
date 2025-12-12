@@ -14,12 +14,15 @@ pub fn process(input: &str) -> miette::Result<String> {
 
 fn min_presses_for_machine(machine: &Machine) -> u32 {
     let mut queue = VecDeque::new();
+
     for i in 0..machine.buttons.len() {
         queue.push_back(PressTracker {
+            state: vec![0; machine.joltage.len()],
+            press_count: 0,
             next_button: i,
-            ..Default::default()
         });
     }
+
     loop {
         let mut tracker = queue
             .pop_front()
@@ -29,42 +32,44 @@ fn min_presses_for_machine(machine: &Machine) -> u32 {
                 )
             })
             .unwrap();
-        // eprintln!("{tracker:?}");
-        tracker.press_count += 1;
-        tracker.state ^= machine.buttons[tracker.next_button];
 
-        if tracker.state == machine.target {
-            return tracker.press_count as _;
+        // Do press
+        tracker.press_count += 1;
+        for &counter in machine.buttons[tracker.next_button].iter() {
+            tracker.state[counter] += 1;
         }
-        tracker.pressed += 1 << tracker.next_button; // Mark button as pressed
-        // eprintln!("{tracker:?}\n");
-        for i in 0..machine.buttons.len() {
-            let button_bit_pos = 1 << i;
-            if (button_bit_pos & tracker.pressed) == 0 {
-                // Button not pressed enqueue to be pressed
-                queue.push_back(PressTracker {
-                    next_button: i,
-                    ..tracker
-                });
+
+        // Check if this branch is a match or if it can continue
+        let mut match_count = 0;
+        for (state_val, target_val) in tracker.state.iter().zip(machine.joltage.iter()) {
+            match state_val.cmp(target_val) {
+                std::cmp::Ordering::Less => {} // Allowed just continue
+                std::cmp::Ordering::Equal => match_count += 1,
+                std::cmp::Ordering::Greater => continue, // No point the branch is dead
             }
+        }
+        if match_count == machine.joltage.len() {
+            return tracker.press_count;
+        }
+
+        for i in 0..machine.buttons.len() {
+            let mut new_tracker = tracker.clone();
+            new_tracker.next_button = i;
+            queue.push_back(new_tracker);
         }
     }
 }
 
-#[derive(Default, Clone, Copy)]
+#[derive(Debug, Clone)]
 struct PressTracker {
-    state: u16,
-    press_count: u8,
-    pressed: u16,
+    state: Vec<u16>,
+    press_count: u32,
     next_button: usize,
 }
 
+#[derive(Debug)]
 struct Machine {
-    /// Bit map of target lights
-    target: u16,
-
-    /// Bit map of which lights each button toggles
-    buttons: Vec<u16>,
+    buttons: Vec<Vec<usize>>,
     joltage: Vec<u16>,
 }
 
@@ -73,10 +78,7 @@ fn parse_machines(input: &str) -> Vec<Machine> {
 }
 
 fn parse_machine(line: &str) -> Machine {
-    let (indicators, rest) = line.split_once("]").unwrap();
-    let target = indicators[1..]
-        .char_indices()
-        .fold(0, |acc, (i, c)| if c == '#' { acc + (1 << i) } else { acc });
+    let (_indicators, rest) = line.split_once("]").unwrap();
     let mut buttons = vec![];
     let mut joltage = vec![];
     for part in rest.split(")") {
@@ -88,45 +90,11 @@ fn parse_machine(line: &str) -> Machine {
             }
         } else {
             // Extract info for button
-            buttons.push(
-                part.split(",")
-                    .map(|x| x.parse().unwrap())
-                    .fold(0, |acc, x: usize| acc + (1 << x)),
-            );
+            buttons.push(part.split(",").map(|x| x.parse().unwrap()).collect());
         }
     }
 
-    Machine {
-        target,
-        buttons,
-        joltage,
-    }
-}
-
-impl Debug for Machine {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut buttons_iter = self.buttons.iter();
-        let mut buttons = format!("{:b}", buttons_iter.next().unwrap());
-        for button in buttons_iter {
-            buttons.push_str(&format!(", {:b}", button));
-        }
-        f.debug_struct("Machine")
-            .field("target", &format!("{:b}", self.target))
-            .field("buttons", &buttons)
-            .field("joltage", &self.joltage)
-            .finish()
-    }
-}
-
-impl Debug for PressTracker {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("PressTracker")
-            .field("state", &format!("{:b}", self.state))
-            .field("press_count", &self.press_count)
-            .field("pressed", &self.pressed)
-            .field("next_button", &self.next_button)
-            .finish()
-    }
+    Machine { buttons, joltage }
 }
 
 #[cfg(test)]
