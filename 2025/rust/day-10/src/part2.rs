@@ -1,6 +1,6 @@
-use std::{collections::VecDeque, fmt::Debug};
+use std::fmt::Debug;
 
-use miette::Context;
+use z3::{Solver, ast::Int};
 
 #[tracing::instrument]
 pub fn process(input: &str) -> miette::Result<String> {
@@ -13,58 +13,46 @@ pub fn process(input: &str) -> miette::Result<String> {
 }
 
 fn min_presses_for_machine(machine: &Machine) -> u32 {
-    let mut queue = VecDeque::new();
-
-    for i in 0..machine.buttons.len() {
-        queue.push_back(PressTracker {
-            state: vec![0; machine.joltage.len()],
-            press_count: 0,
-            next_button: i,
-        });
+    // Create mapping from counter to the buttons that control it
+    let mut counter_buttons = vec![vec![]; machine.joltage.len()];
+    for (i, button) in machine.buttons.iter().enumerate() {
+        for &controller in button {
+            counter_buttons[controller].push(i);
+        }
     }
 
-    loop {
-        let mut tracker = queue
-            .pop_front()
-            .wrap_err_with(|| {
-                format!(
-                    "Error: no more buttons to press but desired pattern not found. {machine:?}"
-                )
-            })
-            .unwrap();
+    // instantiate a Solver
+    let solver = Solver::new();
 
-        // Do press
-        tracker.press_count += 1;
-        for &counter in machine.buttons[tracker.next_button].iter() {
-            tracker.state[counter] += 1;
-        }
+    // Create ints for the number of button presses
+    let buttons_ints: Vec<_> = (0..machine.buttons.len())
+        .map(|i| Int::from_u64(i as u64))
+        .collect();
 
-        // Check if this branch is a match or if it can continue
-        let mut match_count = 0;
-        for (state_val, target_val) in tracker.state.iter().zip(machine.joltage.iter()) {
-            match state_val.cmp(target_val) {
-                std::cmp::Ordering::Less => {} // Allowed just continue
-                std::cmp::Ordering::Equal => match_count += 1,
-                std::cmp::Ordering::Greater => continue, // No point the branch is dead
+    // encode the constraints of the problem as Bool-valued Asts
+    // and assert them in the solver
+    for button_int in buttons_ints.iter() {
+        solver.assert(button_int.ge(0));
+    }
+    for (i, &joltage) in machine.joltage.iter().enumerate() {
+        if let Some(&first) = counter_buttons[i].first() {
+            let mut sum = buttons_ints[first].clone();
+            for &button_index in counter_buttons[i].iter().skip(1) {
+                sum += buttons_ints[button_index].clone();
             }
-        }
-        if match_count == machine.joltage.len() {
-            return tracker.press_count;
-        }
-
-        for i in 0..machine.buttons.len() {
-            let mut new_tracker = tracker.clone();
-            new_tracker.next_button = i;
-            queue.push_back(new_tracker);
+            solver.assert(sum.eq(joltage));
         }
     }
-}
 
-#[derive(Debug, Clone)]
-struct PressTracker {
-    state: Vec<u16>,
-    press_count: u32,
-    next_button: usize,
+    for solution in solver.solutions(&buttons_ints, false).take(2) {
+        let solution: Vec<u64> = solution
+            .iter()
+            .map(Int::as_u64)
+            .map(Option::unwrap)
+            .collect();
+        eprintln!("{solution:?}");
+    }
+    1
 }
 
 #[derive(Debug)]
