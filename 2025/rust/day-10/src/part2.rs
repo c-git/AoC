@@ -26,7 +26,7 @@ fn min_presses_for_machine(machine: &Machine) -> u32 {
 
     // Create ints for the number of button presses
     let buttons_ints: Vec<_> = (0..machine.buttons.len())
-        .map(|i| Int::from_u64(i as u64))
+        .map(|i| Int::new_const(i as i32))
         .collect();
 
     // encode the constraints of the problem as Bool-valued Asts
@@ -50,7 +50,7 @@ fn min_presses_for_machine(machine: &Machine) -> u32 {
             .map(Int::as_u64)
             .map(Option::unwrap)
             .collect();
-        eprintln!("{solution:?}");
+        dbg!(format!("{solution:?}"));
     }
     1
 }
