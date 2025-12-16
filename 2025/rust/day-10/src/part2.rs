@@ -1,19 +1,21 @@
 use std::fmt::Debug;
 
-use z3::{Solver, ast::Int};
+use miette::{Context, bail};
+use z3::{Optimize, ast::Int};
 
 #[tracing::instrument]
 pub fn process(input: &str) -> miette::Result<String> {
     let mut result = 0;
     let machines = parse_machines(input);
     for machine in machines.iter() {
-        result += min_presses_for_machine(machine);
+        result += min_presses_for_machine(machine)
+            .with_context(|| format!("failed to process machine: {machine:?}"))?;
     }
     Ok(result.to_string())
 }
 
-fn min_presses_for_machine(machine: &Machine) -> u32 {
-    // Create mapping from counter to the buttons that control it
+fn min_presses_for_machine(machine: &Machine) -> miette::Result<u32> {
+    // Create mapping from counter to the buttons that increment it
     let mut counter_buttons = vec![vec![]; machine.joltage.len()];
     for (i, button) in machine.buttons.iter().enumerate() {
         for &controller in button {
@@ -22,7 +24,7 @@ fn min_presses_for_machine(machine: &Machine) -> u32 {
     }
 
     // instantiate a Solver
-    let solver = Solver::new();
+    let optimizer = Optimize::new();
 
     // Create ints for the number of button presses
     let buttons_ints: Vec<_> = (0..machine.buttons.len())
@@ -30,29 +32,49 @@ fn min_presses_for_machine(machine: &Machine) -> u32 {
         .collect();
 
     // encode the constraints of the problem as Bool-valued Asts
-    // and assert them in the solver
+    // and assert them in the optimizer
+
+    // Number of presses non-negative for all buttons
     for button_int in buttons_ints.iter() {
-        solver.assert(button_int.ge(0));
+        optimizer.assert(&button_int.ge(0));
     }
+
+    // Joltage correct after presses are done (for each joltage add up the buttons
+    // that increment that control)
     for (i, &joltage) in machine.joltage.iter().enumerate() {
         if let Some(&first) = counter_buttons[i].first() {
             let mut sum = buttons_ints[first].clone();
             for &button_index in counter_buttons[i].iter().skip(1) {
                 sum += buttons_ints[button_index].clone();
             }
-            solver.assert(sum.eq(joltage));
+            optimizer.assert(&sum.eq(joltage));
         }
     }
 
-    for solution in solver.solutions(&buttons_ints, false).take(2) {
-        let solution: Vec<u64> = solution
-            .iter()
-            .map(Int::as_u64)
-            .map(Option::unwrap)
-            .collect();
-        dbg!(format!("{solution:?}"));
+    // Minimize total number of button presses
+    let mut total_button_presses = Int::from_i64(0);
+    for button_int in buttons_ints.iter() {
+        total_button_presses += button_int;
     }
-    1
+    optimizer.minimize(&total_button_presses);
+
+    let solve_output = optimizer.check(&[]);
+    if solve_output != z3::SatResult::Sat {
+        bail!("found no solution: {solve_output:?}");
+    }
+
+    let model = optimizer.get_model().wrap_err("failed to get model")?;
+
+    let mut result = 0;
+    for button_int in buttons_ints.iter() {
+        result += model
+            .get_const_interp(button_int)
+            .wrap_err("failed to get interpretation of button press count")?
+            .as_i64()
+            .wrap_err("failed to convert to u64")?;
+    }
+
+    Ok(result as _)
 }
 
 #[derive(Debug)]
